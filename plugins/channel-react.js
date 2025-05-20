@@ -57,10 +57,6 @@ async (conn, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, sen
     }
 });
 
-
-const config = require('../config');
-const { cmd } = require('../command');
-
 cmd({
     pattern: "chr2",
     alias: ["chremoji", "reactemoji"],
@@ -100,9 +96,6 @@ async (conn, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, sen
         reply(`❎ Error: ${e.message || "Failed to send reaction"}`);
     }
 });
-
-const config = require('../config');
-const { cmd } = require('../command');
 
 cmd({
     pattern: "chrx",
