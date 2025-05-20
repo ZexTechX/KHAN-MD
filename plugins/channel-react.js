@@ -99,23 +99,22 @@ async (conn, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, sen
 
 cmd({
     pattern: "chrx",
-    alias: ["fakereact"],
-    react: "🔢", 
-    desc: "Send multiple reactions to fake reaction count",
+    alias: ["massreact"],
+    react: "🔢",
+    desc: "Send multiple reactions to increment count",
     category: "owner",
     use: '.chrx <link> <emoji>,<count>',
     filename: __filename
 },
-async (conn, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, isCreator, reply }) => {
+async (conn, mek, m, { from, quoted, q, isCreator, reply }) => {
     try {
         if (!isCreator) return reply("❌ Owner only command");
-        if (!q) return reply(`Usage:\n${command} <link> <emoji>,<count>\nExample: ${command} https://whatsapp.com/channel/123 🙂,100`);
+        if (!q) return reply(`Usage:\n.chrx <link> <emoji>,<count>\nExample: .chrx https://whatsapp.com/channel/123 🙂,100`);
 
-        // Parse the input
+        // Parse input
         const [link, emojiPart] = q.split(' ').filter(x => x);
-        if (!emojiPart || !link) return reply("Invalid format!\nUsage: .chrx <link> <emoji>,<count>");
+        if (!emojiPart.includes(",")) return reply("Invalid format! Use: .chrx <link> <emoji>,<count>");
         
-        // Extract emoji and count
         const [emoji, countStr] = emojiPart.split(',');
         const count = parseInt(countStr);
         
@@ -130,42 +129,35 @@ async (conn, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, isC
 
         const channelMeta = await conn.newsletterMetadata("invite", channelId);
         
-        // Send reactions with progress updates
+        // Send reactions with unique variation
         let successCount = 0;
-        const progressMsg = await reply(`🚀 Starting to send ${count} ${emoji} reactions...`);
+        const progressMsg = await reply(`⏳ Starting to send ${count} reactions...`);
         
         for (let i = 0; i < count; i++) {
             try {
-                await conn.newsletterReactMessage(channelMeta.id, messageId, emoji);
+                // Add slight variation to avoid detection
+                const variation = i % 5 === 0 ? " " : ""; // Add space every 5th reaction
+                await conn.newsletterReactMessage(channelMeta.id, messageId, emoji + variation);
                 successCount++;
                 
-                // Update progress every 10 reactions
+                // Update progress
                 if (i % 10 === 0) {
                     await conn.sendMessage(from, { 
                         edit: progressMsg.key, 
-                        text: `⏳ Progress: ${successCount}/${count} ${emoji} reactions sent...` 
+                        text: `⏳ Progress: ${successCount}/${count} reactions sent...` 
                     });
                 }
                 
-                await new Promise(res => setTimeout(res, 800)); // Anti-flood delay
+                await new Promise(res => setTimeout(res, 1500 + Math.random() * 1000)); // Random delay 1.5-2.5s
             } catch (e) {
                 console.error(`Reaction ${i+1} failed:`, e.message);
             }
         }
 
-        // Final result
-        return reply(`╭━━━〔 *KHAN-MD* 〕━━━┈⊷
-┃✅ *Reactions Sent Successfully*
-┃▸ *Channel:* ${channelMeta.name}
-┃▸ *Emoji:* ${emoji} 
-┃▸ *Requested:* ${count}
-┃▸ *Delivered:* ${successCount}
-┃▸ *Success Rate:* ${Math.round((successCount/count)*100)}%
-╰────────────────┈⊷
-> *© Pᴏᴡᴇʀᴇᴅ Bʏ KʜᴀɴX-Aɪ ♡*`);
+        return reply(`✅ Successfully sent ${successCount} ${emoji} reactions to:\n${channelMeta.name}`);
 
     } catch (e) {
         console.error(e);
-        reply(`❌ Error: ${e.message}\nPlease check:\n- Valid link format\n- Correct emoji\n- Reasonable count (1-200)`);
+        reply(`❌ Error: ${e.message}`);
     }
 });
