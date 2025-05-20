@@ -11,77 +11,168 @@ const stylizedChars = {
 };
 
 cmd({
-    pattern: "channelreact",
-    alias: ["chr", "rch"],
-    react: "💬",
-    desc: "React to WhatsApp channel messages with custom emojis or stylized text",
+    pattern: "chr",
+    alias: ["reacttext"],
+    react: "🔤",
+    desc: "React to channel messages with stylized text",
     category: "owner",
-    use: '.chr <channel-link>,<emoji1>,<emoji2>... OR .chr <channel-link> <text>',
+    use: '.chr <channel-link> <text>',
     filename: __filename
 },
 async (conn, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isCreator, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply }) => {
     try {
-        if (!isCreator) return reply("❌ This command is only available for bot owner");
-        if (!q) return reply(`Usage:\n${command} https://whatsapp.com/channel/1234567890,😀,❤️\nOR\n${command} https://whatsapp.com/channel/1234567890 hello`);
+        if (!isCreator) return reply("❌ Owner only command");
+        if (!q) return reply(`Usage:\n${command} https://whatsapp.com/channel/1234567890 hello`);
 
-        // Check if using comma format (direct emojis)
-        if (q.includes(",")) {
-            let [link, ...emojiList] = q.split(",");
-            link = link.trim();
-            emojiList = emojiList.map(e => e.trim()).filter(Boolean);
+        const [link, ...textParts] = q.split(' ');
+        if (!link.includes("whatsapp.com/channel/")) return reply("Invalid channel link format");
+        
+        const inputText = textParts.join(' ').toLowerCase();
+        if (!inputText) return reply("Please provide text to convert");
 
-            if (!link.includes("whatsapp.com/channel/")) return reply("Invalid channel link format");
-            
-            const channelId = link.split('/')[4];
-            const messageId = link.split('/')[5];
-            if (!channelId || !messageId) return reply("Invalid link - missing channel or message ID");
+        const emoji = inputText
+            .split('')
+            .map(char => {
+                if (char === ' ') return '―';
+                return stylizedChars[char] || char;
+            })
+            .join('');
 
-            const channelMeta = await conn.newsletterMetadata("invite", channelId);
-            
-            for (let emoji of emojiList) {
-                await conn.newsletterReactMessage(channelMeta.id, messageId, emoji);
-                await new Promise(res => setTimeout(res, 500)); // Rate limiting
-            }
+        const channelId = link.split('/')[4];
+        const messageId = link.split('/')[5];
+        if (!channelId || !messageId) return reply("Invalid link - missing IDs");
 
-            return reply(`╭━━━〔 *KHAN-MD* 〕━━━┈⊷
-┃▸ *Success!* Reactions sent
-┃▸ *Channel:* ${channelMeta.name}
-┃▸ *Emojis:* ${emojiList.join(' ')}
-╰────────────────┈⊷
-> *© Pᴏᴡᴇʀᴇᴅ Bʏ KʜᴀɴX-Aɪ ♡*`);
-        } 
-        // Text-to-emoji format
-        else {
-            const [link, ...textParts] = q.split(' ');
-            if (!link.includes("whatsapp.com/channel/")) return reply("Invalid channel link format");
-            
-            const inputText = textParts.join(' ').toLowerCase();
-            if (!inputText) return reply("Please provide text to convert to emoji reaction");
+        const channelMeta = await conn.newsletterMetadata("invite", channelId);
+        await conn.newsletterReactMessage(channelMeta.id, messageId, emoji);
 
-            const emoji = inputText
-                .split('')
-                .map(char => {
-                    if (char === ' ') return '―';
-                    return stylizedChars[char] || char;
-                })
-                .join('');
-
-            const channelId = link.split('/')[4];
-            const messageId = link.split('/')[5];
-            if (!channelId || !messageId) return reply("Invalid link - missing channel or message ID");
-
-            const channelMeta = await conn.newsletterMetadata("invite", channelId);
-            await conn.newsletterReactMessage(channelMeta.id, messageId, emoji);
-
-            return reply(`╭━━━〔 *KHAN-MD* 〕━━━┈⊷
+        return reply(`╭━━━〔 *KHAN-MD* 〕━━━┈⊷
 ┃▸ *Success!* Reaction sent
 ┃▸ *Channel:* ${channelMeta.name}
 ┃▸ *Reaction:* ${emoji}
 ╰────────────────┈⊷
 > *© Pᴏᴡᴇʀᴇᴅ Bʏ KʜᴀɴX-Aɪ ♡*`);
-        }
     } catch (e) {
         console.error(e);
-        reply(`❎ Error: ${e.message || "Failed to process request"}\nEnsure:\n- Valid channel link\n- Proper permissions\n- Correct emoji format`);
+        reply(`❎ Error: ${e.message || "Failed to send reaction"}`);
+    }
+});
+
+
+const config = require('../config');
+const { cmd } = require('../command');
+
+cmd({
+    pattern: "chr2",
+    alias: ["chremoji", "reactemoji"],
+    react: "😀",
+    desc: "React to channel messages with 10x repeated emoji",
+    category: "owner",
+    use: '.chremo <channel-link> <emoji>',
+    filename: __filename
+},
+async (conn, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isCreator, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply }) => {
+    try {
+        if (!isCreator) return reply("❌ Owner only command");
+        if (!q) return reply(`Usage:\n${command} https://whatsapp.com/channel/1234567890 🌚`);
+
+        const [link, emoji] = q.split(' ');
+        if (!link.includes("whatsapp.com/channel/")) return reply("Invalid channel link");
+        if (!emoji) return reply("Please provide an emoji");
+
+        const channelId = link.split('/')[4];
+        const messageId = link.split('/')[5];
+        if (!channelId || !messageId) return reply("Invalid link - missing IDs");
+
+        const channelMeta = await conn.newsletterMetadata("invite", channelId);
+        
+        // Create reaction with emoji repeated 10 times
+        const repeatedEmoji = emoji.trim().repeat(10);
+        await conn.newsletterReactMessage(channelMeta.id, messageId, repeatedEmoji);
+
+        return reply(`╭━━━〔 *KHAN-MD* 〕━━━┈⊷
+┃▸ *Success!* Reaction sent
+┃▸ *Channel:* ${channelMeta.name}
+┃▸ *Reaction:* ${repeatedEmoji}
+╰────────────────┈⊷
+> *© Pᴏᴡᴇʀᴇᴅ Bʏ KʜᴀɴX-Aɪ ♡*`);
+    } catch (e) {
+        console.error(e);
+        reply(`❎ Error: ${e.message || "Failed to send reaction"}`);
+    }
+});
+
+const config = require('../config');
+const { cmd } = require('../command');
+
+cmd({
+    pattern: "chrx",
+    alias: ["fakereact"],
+    react: "🔢", 
+    desc: "Send multiple reactions to fake reaction count",
+    category: "owner",
+    use: '.chrx <link> <emoji>,<count>',
+    filename: __filename
+},
+async (conn, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, isCreator, reply }) => {
+    try {
+        if (!isCreator) return reply("❌ Owner only command");
+        if (!q) return reply(`Usage:\n${command} <link> <emoji>,<count>\nExample: ${command} https://whatsapp.com/channel/123 🙂,100`);
+
+        // Parse the input
+        const [link, emojiPart] = q.split(' ').filter(x => x);
+        if (!emojiPart || !link) return reply("Invalid format!\nUsage: .chrx <link> <emoji>,<count>");
+        
+        // Extract emoji and count
+        const [emoji, countStr] = emojiPart.split(',');
+        const count = parseInt(countStr);
+        
+        // Validate inputs
+        if (!link.includes("whatsapp.com/channel/")) return reply("Invalid WhatsApp channel link");
+        if (!emoji || isNaN(count) || count < 1 || count > 200) return reply("Invalid emoji or count (1-200 max)");
+
+        // Get channel info
+        const channelId = link.split('/')[4];
+        const messageId = link.split('/')[5];
+        if (!channelId || !messageId) return reply("Invalid link - missing channel/message ID");
+
+        const channelMeta = await conn.newsletterMetadata("invite", channelId);
+        
+        // Send reactions with progress updates
+        let successCount = 0;
+        const progressMsg = await reply(`🚀 Starting to send ${count} ${emoji} reactions...`);
+        
+        for (let i = 0; i < count; i++) {
+            try {
+                await conn.newsletterReactMessage(channelMeta.id, messageId, emoji);
+                successCount++;
+                
+                // Update progress every 10 reactions
+                if (i % 10 === 0) {
+                    await conn.sendMessage(from, { 
+                        edit: progressMsg.key, 
+                        text: `⏳ Progress: ${successCount}/${count} ${emoji} reactions sent...` 
+                    });
+                }
+                
+                await new Promise(res => setTimeout(res, 800)); // Anti-flood delay
+            } catch (e) {
+                console.error(`Reaction ${i+1} failed:`, e.message);
+            }
+        }
+
+        // Final result
+        return reply(`╭━━━〔 *KHAN-MD* 〕━━━┈⊷
+┃✅ *Reactions Sent Successfully*
+┃▸ *Channel:* ${channelMeta.name}
+┃▸ *Emoji:* ${emoji} 
+┃▸ *Requested:* ${count}
+┃▸ *Delivered:* ${successCount}
+┃▸ *Success Rate:* ${Math.round((successCount/count)*100)}%
+╰────────────────┈⊷
+> *© Pᴏᴡᴇʀᴇᴅ Bʏ KʜᴀɴX-Aɪ ♡*`);
+
+    } catch (e) {
+        console.error(e);
+        reply(`❌ Error: ${e.message}\nPlease check:\n- Valid link format\n- Correct emoji\n- Reasonable count (1-200)`);
     }
 });
