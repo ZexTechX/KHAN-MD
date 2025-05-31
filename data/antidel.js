@@ -8,11 +8,7 @@ const AntiDelDB = DATABASE.define('AntiDelete', {
         autoIncrement: false,
         defaultValue: 1,
     },
-    gc_status: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-    },
-    dm_status: {
+    status: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
     },
@@ -33,7 +29,7 @@ async function initializeAntiDeleteSettings() {
         await AntiDelDB.sync();
         await AntiDelDB.findOrCreate({
             where: { id: 1 },
-            defaults: { gc_status: false, dm_status: false },
+            defaults: { status: config.ANTI_DELETE || false },
         });
         isInitialized = true;
     } catch (error) {
@@ -41,12 +37,11 @@ async function initializeAntiDeleteSettings() {
     }
 }
 
-async function setAnti(type, status) {
+async function setAnti(status) {
     try {
         await initializeAntiDeleteSettings();
         const record = await AntiDelDB.findByPk(1);
-        if (type === 'gc') record.gc_status = status;
-        else if (type === 'dm') record.dm_status = status;
+        record.status = status;
         await record.save();
         return true;
     } catch (error) {
@@ -55,25 +50,14 @@ async function setAnti(type, status) {
     }
 }
 
-async function getAnti(type) {
+async function getAnti() {
     try {
         await initializeAntiDeleteSettings();
         const record = await AntiDelDB.findByPk(1);
-        return type === 'gc' ? record.gc_status : record.dm_status;
+        return record.status;
     } catch (error) {
         console.error('Error getting anti-delete status:', error);
         return false;
-    }
-}
-
-async function getAllAntiDeleteSettings() {
-    try {
-        await initializeAntiDeleteSettings();
-        const record = await AntiDelDB.findByPk(1);
-        return [{ gc_status: record.gc_status, dm_status: record.dm_status }];
-    } catch (error) {
-        console.error('Error retrieving all anti-delete settings:', error);
-        return [];
     }
 }
 
@@ -82,7 +66,4 @@ module.exports = {
     initializeAntiDeleteSettings,
     setAnti,
     getAnti,
-    getAllAntiDeleteSettings,
 };
-
-// by jawadtechx
