@@ -1,5 +1,6 @@
 const { DATABASE } = require('../lib/database');
 const { DataTypes } = require('sequelize');
+const config = require('../config');
 
 const AntiDelDB = DATABASE.define('AntiDelete', {
     id: {
