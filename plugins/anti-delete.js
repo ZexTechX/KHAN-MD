@@ -1,7 +1,5 @@
-const { cmd, commands } = require('../command');
-const { getAnti, setAnti, initializeAntiDeleteSettings } = require('../data/antidel');
-
-initializeAntiDeleteSettings();
+const { cmd } = require('../command');
+const { getAnti, setAnti } = require('../data/antidel');
 
 cmd({
     pattern: "antidelete",
@@ -10,23 +8,27 @@ cmd({
     category: "misc",
     filename: __filename
 },
-async (conn, mek, m, { from, reply, q, text, isCreator, fromMe }) => {
+async (conn, mek, m, { from, reply, text, isCreator }) => {
     if (!isCreator) return reply('This command is only for the bot owner');
+    
     try {
-        const command = q?.toLowerCase().trim();
         const currentStatus = await getAnti();
-
-        if (!command || command === 'status') {
-            return reply(`AntiDelete is currently ${currentStatus ? '✅ ON' : '❌ OFF'}\n\nUsage:\n• .antidelete on - Enable\n• .antidelete off - Disable`);
+        
+        if (!text || text.toLowerCase() === 'status') {
+            return reply(`*AntiDelete Status:* ${currentStatus ? '✅ ON' : '❌ OFF'}\n\nUsage:\n• .antidelete on - Enable\n• .antidelete off - Disable`);
         }
-
-        if (command === 'on') {
+        
+        const action = text.toLowerCase().trim();
+        
+        if (action === 'on') {
             await setAnti(true);
-            return reply('✅ AntiDelete has been enabled for both group chats and direct messages');
-        } else if (command === 'off') {
+            return reply('✅ Anti-delete has been enabled');
+        } 
+        else if (action === 'off') {
             await setAnti(false);
-            return reply('❌ AntiDelete has been disabled for both group chats and direct messages');
-        } else {
+            return reply('❌ Anti-delete has been disabled');
+        } 
+        else {
             return reply('Invalid command. Usage:\n• .antidelete on\n• .antidelete off\n• .antidelete status');
         }
     } catch (e) {
